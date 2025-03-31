@@ -5,17 +5,17 @@ import unittest
 
 import llist
 
-import memory_db
+import mem_store
 
 
 class TestMemoryDB(unittest.TestCase):
     def setUp(self):
-        self.db = memory_db.MemoryDB(['name', 'age', 'city'], indexes=['name', ('name', 'age')])
+        self.db = mem_store.MemStore(['name', 'age', 'city'], indexes=['name', ('name', 'age')])
         self.db.insert({'name': 'Alice', 'age': 25, 'city': 'New York'})
         self.db.insert({'name': 'Bob', 'age': 30, 'city': 'Boston'})
 
     def test_init(self):
-        db = memory_db.MemoryDB(['x', 'y'])
+        db = mem_store.MemStore(['x', 'y'])
         self.assertEqual(db._fields, ('x', 'y'))
         self.assertEqual(db._field_indices, {'x': 0, 'y': 1})
         self.assertTrue(hasattr(db, '_Record'))
@@ -91,7 +91,7 @@ class TestMemoryDB(unittest.TestCase):
         ])
         self.assertEqual(self.db.get_by_insertion_order(slice(1, 2)), [(1, self.db._Record('Bob', 30, 'Boston'))])
 
-        empty_db = memory_db.MemoryDB(['name', 'age'])
+        empty_db = mem_store.MemStore(['name', 'age'])
         self.assertIsNone(empty_db.get_by_insertion_order(-1))
 
         with self.assertRaises(ValueError):

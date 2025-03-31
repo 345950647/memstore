@@ -22,10 +22,10 @@ pip install llist
 Create a database with fields and optional indexes:
 
 ```python
-from memory_db import MemoryDB
+from mem_store import MemStore
 
 # Initialize with fields 'name', 'age', 'city' and indexes on 'name' and ('name', 'age')
-db = MemoryDB(fields=['name', 'age', 'city'], indexes=['name', ('name', 'age')])
+db = MemStore(fields=['name', 'age', 'city'], indexes=['name', ('name', 'age')])
 ```
 
 ### 2. Insert Records

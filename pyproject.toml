@@ -1,9 +1,9 @@
 [project]
-name = "memory-db"
+name = "mem-store"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Your Name",email = "you@example.com"}
+    { name = "Chang Cheng", email = "changcheng@bwbtech.net" }
 ]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,13 +12,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{include = "memory_db", from = "src"}]
-
-
-[[tool.poetry.source]]
-name = "ustc"
-url = "https://pypi.mirrors.ustc.edu.cn/simple"
-priority = "primary"
+packages = [{ include = "mem_store", from = "src" }]
 
 
 [tool.poetry.group.dev.dependencies]

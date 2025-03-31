@@ -6,14 +6,14 @@ import itertools
 import llist
 
 
-class MemoryDB:
+class MemStore:
     _Record: collections.namedtuple
 
     def __init__(self, fields: list[str], indexes: list[str | tuple[str, ...]] | None = None) -> None:
         self._fields: tuple[str, ...] = tuple(fields)
         self._field_indices: dict[str, int] = {field: i for i, field in enumerate(fields)}
         self._Record: collections.namedtuple = collections.namedtuple('Record', fields)
-        self._store: dict[int, 'MemoryDB._Record'] = {}
+        self._store: dict[int, 'MemStore._Record'] = {}
         self._indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = collections.defaultdict(
             lambda: collections.defaultdict(set),
         )
@@ -48,10 +48,10 @@ class MemoryDB:
     def insert(self, value: dict[str, object]) -> int:
         self._validate_value(value, require_all_fields=True)
         fields: tuple[str, ...] = self._fields
-        store: dict[int, 'MemoryDB._Record'] = self._store
+        store: dict[int, 'MemStore._Record'] = self._store
         id_counter: itertools.count = self._id_counter
         new_id: int = next(id_counter)
-        record: 'MemoryDB._Record' = self._Record(*(value[field] for field in fields))
+        record: 'MemStore._Record' = self._Record(*(value[field] for field in fields))
         store[new_id] = record
         self._update_indexes(new_id, record)
         node: llist.dllistnode = self._insertion_order.append(new_id)
@@ -62,13 +62,13 @@ class MemoryDB:
     def insert_many(self, values: list[dict[str, object]]) -> list[int]:
         result: list[int] = []
         fields: tuple[str, ...] = self._fields
-        store: dict[int, 'MemoryDB._Record'] = self._store
+        store: dict[int, 'MemStore._Record'] = self._store
         id_counter: itertools.count = self._id_counter
         Record: collections.namedtuple = self._Record
         for value in values:
             self._validate_value(value, require_all_fields=True)
             new_id: int = next(id_counter)
-            record: 'MemoryDB._Record' = Record(*(value[field] for field in fields))
+            record: 'MemStore._Record' = Record(*(value[field] for field in fields))
             store[new_id] = record
             self._update_indexes(new_id, record)
             node: llist.dllistnode = self._insertion_order.append(new_id)
@@ -77,17 +77,17 @@ class MemoryDB:
             result.append(new_id)
         return result
 
-    def get(self, record_id: int) -> 'MemoryDB._Record' | None:
-        store: dict[int, 'MemoryDB._Record'] = self._store
-        result: 'MemoryDB._Record' | None = store.get(record_id)
+    def get(self, record_id: int) -> 'MemStore._Record' | None:
+        store: dict[int, 'MemStore._Record'] = self._store
+        result: 'MemStore._Record' | None = store.get(record_id)
         return result
 
     def get_by_insertion_order(
             self,
             slice_obj: int | slice = -1,
-    ) -> tuple[int, 'MemoryDB._Record'] | list[tuple[int, 'MemoryDB._Record']] | None:
-        store: dict[int, 'MemoryDB._Record'] = self._store
-        result: tuple[int, 'MemoryDB._Record'] | list[tuple[int, 'MemoryDB._Record']] | None = None
+    ) -> tuple[int, 'MemStore._Record'] | list[tuple[int, 'MemStore._Record']] | None:
+        store: dict[int, 'MemStore._Record'] = self._store
+        result: tuple[int, 'MemStore._Record'] | list[tuple[int, 'MemStore._Record']] | None = None
         if self._insertion_order:
             if isinstance(slice_obj, int):
                 slice_start: int = slice_obj
@@ -102,7 +102,7 @@ class MemoryDB:
 
             ids_list: list[int] = list(self._insertion_order)
             sliced_ids: list[int] = ids_list[slice_start:slice_stop:slice_step]
-            result_list: list[tuple[int, 'MemoryDB._Record']] = [
+            result_list: list[tuple[int, 'MemStore._Record']] = [
                 (record_id, store[record_id])
                 for record_id
                 in sliced_ids
@@ -115,13 +115,13 @@ class MemoryDB:
 
     def update(self, record_id: int, value: dict[str, object]) -> bool:
         result: bool = False
-        store: dict[int, 'MemoryDB._Record'] = self._store
+        store: dict[int, 'MemStore._Record'] = self._store
         fields: tuple[str, ...] = self._fields
         self._validate_value(value)
         if record_id in store:
-            old_record: 'MemoryDB._Record' = store[record_id]
+            old_record: 'MemStore._Record' = store[record_id]
             new_values: list[object] = [value.get(field, old_record[i]) for i, field in enumerate(fields)]
-            new_record: 'MemoryDB._Record' = self._Record(*new_values)
+            new_record: 'MemStore._Record' = self._Record(*new_values)
             affected_fields: set[str] = set(value.keys())
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
             store[record_id] = new_record
@@ -136,13 +136,13 @@ class MemoryDB:
             update_values: dict[str, object],
     ) -> int:
         result: int = 0
-        store: dict[int, 'MemoryDB._Record'] = self._store
+        store: dict[int, 'MemStore._Record'] = self._store
         self._validate_value(update_values)
-        matches: list[tuple[int, 'MemoryDB._Record']] = self.get_by_index(fields, field_values)
+        matches: list[tuple[int, 'MemStore._Record']] = self.get_by_index(fields, field_values)
         affected_fields: set[str] = set(update_values.keys())
         for record_id, old_record in matches:
             new_values: list[object] = [update_values.get(field, old_record[i]) for i, field in enumerate(self._fields)]
-            new_record: 'MemoryDB._Record' = self._Record(*new_values)
+            new_record: 'MemStore._Record' = self._Record(*new_values)
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
             store[record_id] = new_record
             self._update_affected_indexes(record_id, new_record, affected_fields)
@@ -151,9 +151,9 @@ class MemoryDB:
 
     def delete(self, record_id: int) -> bool:
         result: bool = False
-        store: dict[int, 'MemoryDB._Record'] = self._store
+        store: dict[int, 'MemStore._Record'] = self._store
         if record_id in store:
-            value: 'MemoryDB._Record' = store[record_id]
+            value: 'MemStore._Record' = store[record_id]
             self._remove_from_indexes(record_id, value)
             del store[record_id]
             if record_id in self._inserted_set:
@@ -164,9 +164,9 @@ class MemoryDB:
             result = True
         return result
 
-    def all(self) -> list[tuple[int, 'MemoryDB._Record']]:
-        store: dict[int, 'MemoryDB._Record'] = self._store
-        result: list[tuple[int, 'MemoryDB._Record']] = list(store.items())
+    def all(self) -> list[tuple[int, 'MemStore._Record']]:
+        store: dict[int, 'MemStore._Record'] = self._store
+        result: list[tuple[int, 'MemStore._Record']] = list(store.items())
         return result
 
     def add_index(self, fields: str | tuple[str, ...]) -> None:
@@ -174,7 +174,7 @@ class MemoryDB:
         indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
         if fields_tuple not in indexes:
             _ = indexes[fields_tuple]
-            store: dict[int, 'MemoryDB._Record'] = self._store
+            store: dict[int, 'MemStore._Record'] = self._store
             for record_id, value in store.items():
                 index_value: object = self._get_index_value(fields_tuple, value)
                 indexes[fields_tuple][index_value].add(record_id)
@@ -194,14 +194,14 @@ class MemoryDB:
             self,
             fields: str | tuple[str, ...],
             field_values: object | tuple[object, ...],
-    ) -> list[tuple[int, 'MemoryDB._Record']]:
-        result: list[tuple[int, 'MemoryDB._Record']] = []
+    ) -> list[tuple[int, 'MemStore._Record']]:
+        result: list[tuple[int, 'MemStore._Record']] = []
         fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
         field_values_tuple: tuple[object, ...] = field_values if isinstance(field_values, tuple) else (field_values,)
         if len((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple) != len(field_values_tuple):
             raise ValueError('Fields and values must have the same length')
         indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
-        store: dict[int, 'MemoryDB._Record'] = self._store
+        store: dict[int, 'MemStore._Record'] = self._store
         field_indices: dict[str, int] = self._field_indices
         best_index: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
         if best_index:
@@ -224,7 +224,7 @@ class MemoryDB:
                 break
         return result
 
-    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemoryDB._Record') -> object:
+    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> object:
         field_indices: dict[str, int] = self._field_indices
         if isinstance(fields, str):
             result: object = value[field_indices[fields]]
@@ -233,14 +233,14 @@ class MemoryDB:
             result: tuple[object, ...] = tuple(value[i] for i in indices)
         return result
 
-    def _update_indexes(self, record_id: int, value: 'MemoryDB._Record') -> None:
+    def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
         indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
         for fields in indexes:
             index_value: object = self._get_index_value(fields, value)
             _ = indexes[fields]
             indexes[fields][index_value].add(record_id)
 
-    def _remove_from_indexes(self, record_id: int, value: 'MemoryDB._Record') -> None:
+    def _remove_from_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
         indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
         for fields in indexes:
             index_value: object = self._get_index_value(fields, value)
@@ -250,7 +250,7 @@ class MemoryDB:
                 if not field_index[index_value]:
                     del field_index[index_value]
 
-    def _update_affected_indexes(self, record_id: int, value: 'MemoryDB._Record', affected_fields: set[str]) -> None:
+    def _update_affected_indexes(self, record_id: int, value: 'MemStore._Record', affected_fields: set[str]) -> None:
         indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
         for fields in indexes:
             if any(field in affected_fields for field in (fields if isinstance(fields, tuple) else (fields,))):
@@ -261,7 +261,7 @@ class MemoryDB:
     def _remove_from_affected_indexes(
             self,
             record_id: int,
-            value: 'MemoryDB._Record',
+            value: 'MemStore._Record',
             affected_fields: set[str],
     ) -> None:
         indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
