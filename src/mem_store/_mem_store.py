@@ -62,33 +62,47 @@ class MemStore:
     def get(self, record_id: int) -> 'MemStore._Record' | None:
         return self._store.get(record_id)
 
+    def _find_best_index(self, fields: str | tuple[str, ...]) -> str | tuple[str, ...] | None:
+        for index_fields in self._indexes:
+            if index_fields == fields:
+                result = index_fields
+                break
+        else:
+            result = None
+        return result
+
     def get_by_index(
             self,
             fields: str | tuple[str, ...],
             field_values: typing.Any | tuple[typing.Any, ...],
     ) -> list[tuple[int, 'MemStore._Record']]:
-        result: list[tuple[int, 'MemStore._Record']] = []
-        fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
+        fields: str | tuple[str, ...] = self._normalize_fields(fields)
         field_values_tuple: tuple[typing.Any, ...] = (
             field_values if isinstance(field_values, tuple) else (field_values,)
         )
-        if len((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple) != len(field_values_tuple):
+        if len((fields,) if isinstance(fields, str) else fields) != len(field_values_tuple):
             raise ValueError('Fields and values must have the same length')
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
-        store: dict[int, 'MemStore._Record'] = self._store
-        field_indices: dict[str, int] = self._field_indices
-        best_index: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
+        best_index: str | tuple[str, ...] | None = self._find_best_index(fields)
         if best_index:
-            index_values: typing.Any = (
-                field_values_tuple[0] if isinstance(fields_tuple, str) else tuple(field_values_tuple)
-            )
+            index_values: typing.Any = (field_values_tuple[0] if isinstance(fields, str) else tuple(field_values_tuple))
             if index_values in indexes[best_index]:
-                record_ids: set[int] = indexes[best_index][index_values]
-                result = [(record_id, store[record_id]) for record_id in record_ids if record_id in store and all(
-                    store[record_id][field_indices[f]] == v
-                    for f, v
-                    in zip((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple, field_values_tuple)
-                )]
+                field_indices: dict[str, int] = self._field_indices
+                store: dict[int, 'MemStore._Record'] = self._store
+                result = [
+                    (record_id, store[record_id])
+                    for record_id
+                    in indexes[best_index][index_values]
+                    if record_id in store and all(
+                        store[record_id][field_indices[f]] == v
+                        for f, v
+                        in zip((fields,) if isinstance(fields, str) else fields, field_values_tuple)
+                    )
+                ]
+            else:
+                result = []
+        else:
+            result = []
         return result
 
     def get_by_insertion_order(
@@ -134,9 +148,9 @@ class MemStore:
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
             store[record_id] = new_record
             self._update_affected_indexes(record_id, new_record, affected_fields)
-            result: bool = True
+            result = True
         else:
-            result: bool = False
+            result = False
         return result
 
     def update_by_index(
@@ -203,15 +217,6 @@ class MemStore:
             index_to_drop: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
             if index_to_drop and index_to_drop in indexes:
                 del indexes[index_to_drop]
-
-    def _find_best_index(self, fields: str | tuple[str, ...]) -> str | tuple[str, ...] | None:
-        for index_fields in self._indexes:
-            if index_fields == fields:
-                result = index_fields
-                break
-        else:
-            result = None
-        return result
 
     def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
         for fields, index in self._indexes.items():
