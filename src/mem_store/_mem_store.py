@@ -174,14 +174,20 @@ class MemStore:
         result: list[tuple[int, 'MemStore._Record']] = list(self._store.items())
         return result
 
+    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> typing.Any:
+        if isinstance(fields, str):
+            result: typing.Any = value[self._field_indices[fields]]
+        else:
+            result: tuple[typing.Any, ...] = tuple(value[i] for i in (self._field_indices[field] for field in fields))
+        return result
+
     def add_index(self, fields: str | tuple[str, ...]) -> None:
         fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         if fields_tuple not in indexes:
-            _ = indexes[fields_tuple]
+            index = indexes[fields_tuple]
             for record_id, value in self._store.items():
-                index_value: typing.Any = self._get_index_value(fields_tuple, value)
-                indexes[fields_tuple][index_value].add(record_id)
+                index[self._get_index_value(fields_tuple, value)].add(record_id)
 
     def drop_index(self, fields: str | tuple[str, ...]) -> None:
         try:
@@ -200,13 +206,6 @@ class MemStore:
             if index_fields == fields:
                 result = index_fields
                 break
-        return result
-
-    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> typing.Any:
-        if isinstance(fields, str):
-            result: typing.Any = value[self._field_indices[fields]]
-        else:
-            result: tuple[typing.Any, ...] = tuple(value[i] for i in (self._field_indices[field] for field in fields))
         return result
 
     def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
