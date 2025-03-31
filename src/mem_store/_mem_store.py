@@ -48,7 +48,7 @@ class MemStore:
     def insert(
             self,
             value: dict[str, object],
-            require_all_fields: bool = False,
+            require_all_fields: bool = True,
     ) -> int:
         self._validate_value(value, require_all_fields=require_all_fields)
         fields: tuple[str, ...] = self._fields
@@ -66,7 +66,7 @@ class MemStore:
     def insert_many(
             self,
             values: list[dict[str, object]],
-            require_all_fields: bool = False,
+            require_all_fields: bool = True,
     ) -> list[int]:
         result: list[int] = []
         fields: tuple[str, ...] = self._fields
