@@ -8,7 +8,7 @@ import llist
 import mem_store
 
 
-class TestMemoryDB(unittest.TestCase):
+class TestMemStore(unittest.TestCase):
     def setUp(self):
         self.db = mem_store.MemStore(['name', 'age', 'city'], indexes=['name', ('name', 'age')])
         self.db.insert({'name': 'Alice', 'age': 25, 'city': 'New York'})
