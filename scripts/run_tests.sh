@@ -3,7 +3,7 @@
 export PYTHONPATH=./src
 
 echo "Running tests..."
-coverage run -m pytest
+coverage run -m unittest
 
 echo "Generating coverage report..."
 coverage report
