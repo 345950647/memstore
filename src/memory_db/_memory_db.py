@@ -101,9 +101,12 @@ class MemoryDB:
 
             ids_list: list[int] = list(self._insertion_order)
             sliced_ids: list[int] = ids_list[slice_start:slice_stop:slice_step]
-            result_list: list[tuple[int, 'MemoryDB._Record']] = [(record_id, store[record_id]) for record_id in
-                                                                 sliced_ids]
-            if isinstance(slice_obj, slice) and len(result_list) > 1:
+            result_list: list[tuple[int, 'MemoryDB._Record']] = [
+                (record_id, store[record_id])
+                for record_id
+                in sliced_ids
+            ]
+            if isinstance(slice_obj, slice):
                 result = result_list
             elif result_list:
                 result = result_list[0]
@@ -176,11 +179,14 @@ class MemoryDB:
                 indexes[fields_tuple][index_value].add(record_id)
 
     def drop_index(self, fields: str | tuple[str, ...]) -> None:
-        fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
-        index_to_drop: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
-        if index_to_drop and index_to_drop in indexes:
-            del indexes[index_to_drop]
+        try:
+            fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
+            indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+            index_to_drop: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
+            if index_to_drop and index_to_drop in indexes:
+                del indexes[index_to_drop]
+        except ValueError:
+            pass
 
     def get_by_index(
             self,
