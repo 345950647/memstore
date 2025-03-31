@@ -11,12 +11,9 @@ class MemStore:
             fields: list[str],
             indexes: list[str | tuple[str, ...]] | None = None,
     ) -> None:
-        Record = collections.namedtuple('Record', fields)
-
-        self.Record: collections.namedtuple = Record
-
+        self._record_class = collections.namedtuple('Record', fields)
         self._fields: tuple[str, ...] = tuple(fields)
-        self._data: dict[int, Record] = {}
+        self._data: dict[int, typing.Any] = {}
         self._indexes: dict[
             str,
             dict[typing.Any, set[int]],
@@ -30,7 +27,7 @@ class MemStore:
             values: dict[str, typing.Any],
     ) -> int:
         ident = next(self._ident_counter)
-        record = self.Record(*(values[field] if field in values else None for field in self._fields))
+        record = self._record_class(*(values[field] if field in values else None for field in self._fields))
         self._data[ident] = record
         [index[record[field]].add(ident) for field, index in self._indexes.items()]
         return ident
@@ -41,14 +38,14 @@ class MemStore:
     ) -> list[int]:
         return [self.insert(value) for value in values]
 
-    def get(self, ident: int) -> 'MemStore.Record' | None:
+    def get(self, ident: int) -> typing.Any | None:
         return self._data.get(ident)
 
     def get_by_index(
             self,
             field: str,
             value: typing.Any,
-    ) -> list[tuple[int, typing.NamedTuple]]:
+    ) -> list[tuple[int, typing.Any]]:
         indexes = self._indexes
         if field in indexes:
             index = indexes[field]
@@ -61,7 +58,7 @@ class MemStore:
             result = []
         return result
 
-    def all(self) -> list[tuple[int, 'MemStore.Record']]:
+    def all(self) -> list[tuple[int, typing.Any]]:
         return list(self._data.items())
 
     def delete(
