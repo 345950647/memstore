@@ -83,6 +83,35 @@ class MemStore:
         result: 'MemStore._Record' | None = store.get(record_id)
         return result
 
+    def get_by_index(
+            self,
+            fields: str | tuple[str, ...],
+            field_values: typing.Any | tuple[typing.Any, ...],
+    ) -> list[tuple[int, 'MemStore._Record']]:
+        result: list[tuple[int, 'MemStore._Record']] = []
+        fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
+        field_values_tuple: tuple[typing.Any, ...] = (
+            field_values if isinstance(field_values, tuple) else (field_values,)
+        )
+        if len((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple) != len(field_values_tuple):
+            raise ValueError('Fields and values must have the same length')
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
+        store: dict[int, 'MemStore._Record'] = self._store
+        field_indices: dict[str, int] = self._field_indices
+        best_index: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
+        if best_index:
+            index_values: typing.Any = (
+                field_values_tuple[0] if isinstance(fields_tuple, str) else tuple(field_values_tuple)
+            )
+            if index_values in indexes[best_index]:
+                record_ids: set[int] = indexes[best_index][index_values]
+                result = [(record_id, store[record_id]) for record_id in record_ids if record_id in store and all(
+                    store[record_id][field_indices[f]] == v
+                    for f, v
+                    in zip((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple, field_values_tuple)
+                )]
+        return result
+
     def get_by_insertion_order(
             self,
             slice_obj: int | slice = -1,
@@ -170,8 +199,7 @@ class MemStore:
         return result
 
     def all(self) -> list[tuple[int, 'MemStore._Record']]:
-        store: dict[int, 'MemStore._Record'] = self._store
-        result: list[tuple[int, 'MemStore._Record']] = list(store.items())
+        result: list[tuple[int, 'MemStore._Record']] = list(self._store.items())
         return result
 
     def add_index(self, fields: str | tuple[str, ...]) -> None:
@@ -179,8 +207,7 @@ class MemStore:
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         if fields_tuple not in indexes:
             _ = indexes[fields_tuple]
-            store: dict[int, 'MemStore._Record'] = self._store
-            for record_id, value in store.items():
+            for record_id, value in self._store.items():
                 index_value: typing.Any = self._get_index_value(fields_tuple, value)
                 indexes[fields_tuple][index_value].add(record_id)
 
@@ -194,33 +221,6 @@ class MemStore:
             index_to_drop: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
             if index_to_drop and index_to_drop in indexes:
                 del indexes[index_to_drop]
-
-    def get_by_index(
-            self,
-            fields: str | tuple[str, ...],
-            field_values: typing.Any | tuple[typing.Any, ...],
-    ) -> list[tuple[int, 'MemStore._Record']]:
-        result: list[tuple[int, 'MemStore._Record']] = []
-        fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
-        field_values_tuple: tuple[typing.Any, ...] = field_values if isinstance(field_values, tuple) else (
-            field_values,)
-        if len((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple) != len(field_values_tuple):
-            raise ValueError('Fields and values must have the same length')
-        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
-        store: dict[int, 'MemStore._Record'] = self._store
-        field_indices: dict[str, int] = self._field_indices
-        best_index: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
-        if best_index:
-            index_values: typing.Any = field_values_tuple[0] if isinstance(fields_tuple, str) else tuple(
-                field_values_tuple)
-            if index_values in indexes[best_index]:
-                record_ids: set[int] = indexes[best_index][index_values]
-                result = [(record_id, store[record_id]) for record_id in record_ids if record_id in store and all(
-                    store[record_id][field_indices[f]] == v
-                    for f, v
-                    in zip((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple, field_values_tuple)
-                )]
-        return result
 
     def _find_best_index(self, fields: str | tuple[str, ...]) -> str | tuple[str, ...] | None:
         result: str | tuple[str, ...] | None = None
