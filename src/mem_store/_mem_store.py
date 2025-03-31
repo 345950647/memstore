@@ -132,9 +132,7 @@ class MemStore:
             ids_list: list[int] = list(self._insertion_order)
             sliced_ids: list[int] = ids_list[slice_start:slice_stop:slice_step]
             result_list: list[tuple[int, 'MemStore._Record']] = [
-                (record_id, store[record_id])
-                for record_id
-                in sliced_ids
+                (record_id, store[record_id]) for record_id in sliced_ids
             ]
             if isinstance(slice_obj, slice):
                 result = result_list
@@ -171,9 +169,7 @@ class MemStore:
         affected_fields: set[str] = set(update_values.keys())
         for record_id, old_record in matches:
             new_values: list[typing.Any] = [
-                update_values.get(field, old_record[i])
-                for i, field
-                in enumerate(self._fields)
+                update_values.get(field, old_record[i]) for i, field in enumerate(self._fields)
             ]
             new_record: 'MemStore._Record' = self._Record(*new_values)
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
