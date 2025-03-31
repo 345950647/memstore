@@ -56,26 +56,28 @@ class MemStore:
             fields: str | tuple[str, ...],
             field_values: typing.Any | tuple[typing.Any, ...],
     ) -> list[tuple[int, 'MemStore._Record']]:
-        field_values: tuple[typing.Any, ...] = field_values if isinstance(field_values, tuple) else (field_values,)
-        if len((fields,) if isinstance(fields, str) else fields) != len(field_values):
-            raise ValueError('Fields and values must have the same length')
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         if fields in indexes:
             index = indexes[fields]
-            index_values: typing.Any = (field_values[0] if isinstance(fields, str) else tuple(field_values))
-            if index_values in index:
+            if field_values in index:
                 field_indices: dict[str, int] = self._field_indices
                 store: dict[int, 'MemStore._Record'] = self._store
-                result = [
-                    (record_id, store[record_id])
-                    for record_id
-                    in index[index_values]
-                    if record_id in store and all(
-                        store[record_id][field_indices[f]] == v
-                        for f, v
-                        in zip((fields,) if isinstance(fields, str) else fields, field_values)
-                    )
-                ]
+                if isinstance(fields, str):
+                    result = [
+                        (record_id, store[record_id])
+                        for record_id
+                        in index[field_values]
+                        if record_id in store and store[record_id][field_indices[fields]] == field_values
+                    ]
+                else:
+                    result = [
+                        (record_id, store[record_id])
+                        for record_id
+                        in index[field_values]
+                        if record_id in store and all(
+                            store[record_id][field_indices[f]] == v for f, v in zip(fields, field_values)
+                        )
+                    ]
             else:
                 result = []
         else:
