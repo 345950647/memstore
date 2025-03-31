@@ -129,7 +129,6 @@ class MemStore:
                 slice_step: int = slice_obj.step if slice_obj.step is not None else 1
             else:
                 raise ValueError('slice_obj must be an integer or slice object')
-
             ids_list: list[int] = list(self._insertion_order)
             sliced_ids: list[int] = ids_list[slice_start:slice_stop:slice_step]
             result_list: list[tuple[int, 'MemStore._Record']] = [
