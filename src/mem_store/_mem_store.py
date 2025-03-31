@@ -45,8 +45,12 @@ class MemStore:
             raise ValueError(f'Index fields must be in {self._fields}')
         return result
 
-    def insert(self, value: dict[str, object]) -> int:
-        self._validate_value(value, require_all_fields=True)
+    def insert(
+            self,
+            value: dict[str, object],
+            require_all_fields: bool = False,
+    ) -> int:
+        self._validate_value(value, require_all_fields=require_all_fields)
         fields: tuple[str, ...] = self._fields
         store: dict[int, 'MemStore._Record'] = self._store
         id_counter: itertools.count = self._id_counter
@@ -59,14 +63,18 @@ class MemStore:
         self._inserted_set.add(new_id)
         return new_id
 
-    def insert_many(self, values: list[dict[str, object]]) -> list[int]:
+    def insert_many(
+            self,
+            values: list[dict[str, object]],
+            require_all_fields: bool = False,
+    ) -> list[int]:
         result: list[int] = []
         fields: tuple[str, ...] = self._fields
         store: dict[int, 'MemStore._Record'] = self._store
         id_counter: itertools.count = self._id_counter
         Record: collections.namedtuple = self._Record
         for value in values:
-            self._validate_value(value, require_all_fields=True)
+            self._validate_value(value, require_all_fields=require_all_fields)
             new_id: int = next(id_counter)
             record: 'MemStore._Record' = Record(*(value[field] for field in fields))
             store[new_id] = record
