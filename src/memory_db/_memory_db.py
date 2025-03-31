@@ -181,12 +181,13 @@ class MemoryDB:
     def drop_index(self, fields: str | tuple[str, ...]) -> None:
         try:
             fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
+        except ValueError:
+            pass
+        else:
             indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
             index_to_drop: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
             if index_to_drop and index_to_drop in indexes:
                 del indexes[index_to_drop]
-        except ValueError:
-            pass
 
     def get_by_index(
             self,
