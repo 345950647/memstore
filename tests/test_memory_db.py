@@ -135,7 +135,7 @@ class TestMemoryDB(unittest.TestCase):
     def test_drop_index(self):
         self.db.drop_index('name')
         self.assertNotIn('name', self.db._indexes)
-        self.db.drop_index('invalid')  # 不存在的索引应无影响
+        self.db.drop_index('invalid')
 
     def test_get_by_index(self):
         result = self.db.get_by_index('name', 'Alice')
