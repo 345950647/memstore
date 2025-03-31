@@ -35,6 +35,21 @@ class MemStore:
         if not require_all_fields and not value_fields.issubset(self._fields):
             raise ValueError(f'Value must contain valid fields from: {self._fields}')
 
+    def _get_index_value(
+            self,
+            field: str,
+            record: 'MemStore._Record',
+    ) -> typing.Any:
+        return record[self._field_indices[field]]
+
+    def _update_indexes(
+            self,
+            record_id: int,
+            record: 'MemStore._Record',
+    ) -> None:
+        for fields, index in self._indexes.items():
+            index[self._get_index_value(fields, record)].add(record_id)
+
     def insert(self, value: dict[str, typing.Any]) -> int:
         self._validate_value(value, require_all_fields=True)
         new_id = next(self._id_counter)
@@ -53,29 +68,20 @@ class MemStore:
 
     def get_by_index(
             self,
-            fields: str | tuple[str, ...],
-            field_values: typing.Any | tuple[typing.Any, ...],
+            field: str,
+            field_value: typing.Any,
     ) -> list[tuple[int, 'MemStore._Record']]:
         indexes = self._indexes
-        if fields in indexes:
-            index = indexes[fields]
-            if field_values in index:
+        if field in indexes:
+            index = indexes[field]
+            if field_value in index:
                 field_indices = self._field_indices
                 store = self._store
-                if isinstance(fields, str):
-                    result = [
-                        (i, store[i])
-                        for i
-                        in index[field_values]
-                        if i in store and store[i][field_indices[fields]] == field_values
-                    ]
-                else:
-                    result = [
-                        (i, store[i])
-                        for i
-                        in index[field_values]
-                        if i in store and all(store[i][field_indices[f]] == v for f, v in zip(fields, field_values))
-                    ]
+                result = [
+                    (i, store[i]) for i
+                    in index[field_value]
+                    if i in store and store[i][field_indices[field]] == field_value
+                ]
             else:
                 result = []
         else:
@@ -105,6 +111,30 @@ class MemStore:
             result = None
         return result
 
+    def _remove_from_affected_indexes(
+            self,
+            id_: int,
+            record: 'MemStore._Record',
+            affected_fields: set[str],
+    ) -> None:
+        for field, index in self._indexes.items():
+            if field in affected_fields:
+                index_value = self._get_index_value(field, record)
+                if id_ in index[index_value]:
+                    index[index_value].remove(id_)
+                    if not index[index_value]:
+                        del index[index_value]
+
+    def _update_affected_indexes(
+            self,
+            id_: int,
+            record: 'MemStore._Record',
+            affected_fields: set[str],
+    ) -> None:
+        for field, index in self._indexes.items():
+            if field in affected_fields:
+                index[self._get_index_value(field, record)].add(id_)
+
     def update(self, record_id: int, value: dict[str, typing.Any]) -> bool:
         self._validate_value(value)
         store = self._store
@@ -122,15 +152,15 @@ class MemStore:
 
     def update_by_index(
             self,
-            fields: str | tuple[str, ...],
-            field_values: typing.Any | tuple[typing.Any, ...],
+            field: str,
+            field_value: typing.Any,
             update_values: dict[str, typing.Any],
     ) -> int:
         self._validate_value(update_values)
         result = 0
         store = self._store
         affected_fields = set(update_values.keys())
-        for record_id, old_record in self.get_by_index(fields, field_values):
+        for record_id, old_record in self.get_by_index(field, field_value):
             record = self._Record(*(update_values.get(f, old_record[i]) for i, f in enumerate(self._fields)))
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
             store[record_id] = record
@@ -138,15 +168,30 @@ class MemStore:
             result += 1
         return result
 
-    def delete(self, record_id: int) -> bool:
+    def _remove_from_indexes(
+            self,
+            id_: int,
+            record: 'MemStore._Record',
+    ) -> None:
+        for fields, index in self._indexes.items():
+            index_value = self._get_index_value(fields, record)
+            if id_ in index[index_value]:
+                index[index_value].remove(id_)
+                if not index[index_value]:
+                    del index[index_value]
+
+    def delete(
+            self,
+            id_: int,
+    ) -> bool:
         store = self._store
-        if record_id in store:
-            self._remove_from_indexes(record_id, store[record_id])
-            del store[record_id]
-            if record_id in self._inserted_set:
-                self._insertion_order.remove(self._inserted_nodes[record_id])
-                del self._inserted_nodes[record_id]
-                self._inserted_set.remove(record_id)
+        if id_ in store:
+            self._remove_from_indexes(id_, store[id_])
+            del store[id_]
+            if id_ in self._inserted_set:
+                self._insertion_order.remove(self._inserted_nodes[id_])
+                del self._inserted_nodes[id_]
+                self._inserted_set.remove(id_)
             result = True
         else:
             result = False
@@ -155,53 +200,20 @@ class MemStore:
     def all(self) -> list[tuple[int, 'MemStore._Record']]:
         return list(self._store.items())
 
-    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> typing.Any:
-        field_indices = self._field_indices
-        if isinstance(fields, str):
-            result = value[field_indices[fields]]
-        else:
-            result = tuple(value[field_indices[f]] for f in fields)
-        return result
-
-    def add_index(self, fields: str | tuple[str, ...]) -> None:
-        indexes = self._indexes
-        if fields not in indexes:
-            index = indexes[fields]
-            for record_id, value in self._store.items():
-                index[self._get_index_value(fields, value)].add(record_id)
-
-    def drop_index(self, fields: str | tuple[str, ...]) -> None:
-        indexes = self._indexes
-        if fields in indexes:
-            del indexes[fields]
-
-    def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
-        for fields, index in self._indexes.items():
-            index[self._get_index_value(fields, value)].add(record_id)
-
-    def _remove_from_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
-        for fields, index in self._indexes.items():
-            index_value = self._get_index_value(fields, value)
-            if record_id in index[index_value]:
-                index[index_value].remove(record_id)
-                if not index[index_value]:
-                    del index[index_value]
-
-    def _update_affected_indexes(self, record_id: int, value: 'MemStore._Record', affected_fields: set[str]) -> None:
-        for fields, index in self._indexes.items():
-            if any(f in affected_fields for f in (fields if isinstance(fields, tuple) else (fields,))):
-                index[self._get_index_value(fields, value)].add(record_id)
-
-    def _remove_from_affected_indexes(
+    def add_index(
             self,
-            record_id: int,
-            value: 'MemStore._Record',
-            affected_fields: set[str],
+            field: str,
     ) -> None:
-        for fields, index in self._indexes.items():
-            if any(f in affected_fields for f in (fields if isinstance(fields, tuple) else (fields,))):
-                index_value = self._get_index_value(fields, value)
-                if record_id in index[index_value]:
-                    index[index_value].remove(record_id)
-                    if not index[index_value]:
-                        del index[index_value]
+        indexes = self._indexes
+        if field not in indexes:
+            index = indexes[field]
+            for record_id, value in self._store.items():
+                index[self._get_index_value(field, value)].add(record_id)
+
+    def drop_index(
+            self,
+            field: str,
+    ) -> None:
+        indexes = self._indexes
+        if field in indexes:
+            del indexes[field]
