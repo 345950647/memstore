@@ -25,7 +25,7 @@ class MemStore:
     ) -> int:
         ident = next(self._ident_counter)
         self._data[ident] = values
-        [index[values.get(field)].add(ident) for field, index in self._indexes.items()]
+        [index[values[field]].add(ident) for field, index in self._indexes.items() if field in values]
         return ident
 
     def insert_many(
@@ -42,14 +42,10 @@ class MemStore:
             field: typing.Any,
             value: typing.Any,
     ) -> list[tuple[int, dict]]:
-        indexes = self._indexes
-        if field in indexes:
-            index = indexes[field]
-            if value in index:
-                data = self._data
-                result = [(ident, data[ident]) for ident in index[value]]
-            else:
-                result = []
+        index = self._indexes[field]
+        if value in index:
+            data = self._data
+            result = [(ident, data[ident]) for ident in index[value]]
         else:
             result = []
         return result
@@ -63,9 +59,9 @@ class MemStore:
     ) -> bool:
         data = self._data
         if ident in data:
-            record = data[ident]
+            values = data[ident]
             for field, index in self._indexes.items():
-                value = record[field]
+                value = values[field]
                 idents = index[value]
                 if ident in idents:
                     idents.remove(ident)
@@ -84,7 +80,7 @@ class MemStore:
         indexes = self._indexes
         if field not in indexes:
             index = indexes[field]
-            [index[record[field]].add(ident) for ident, record in self._data.items()]
+            [index[values[field]].add(ident) for ident, values in self._data.items() if field in values]
 
     def drop_index(
             self,
