@@ -95,8 +95,6 @@ class MemStore:
             self,
             slice_obj: int | slice = -1,
     ) -> tuple[int, 'MemStore._Record'] | list[tuple[int, 'MemStore._Record']] | None:
-        store: dict[int, 'MemStore._Record'] = self._store
-        result: tuple[int, 'MemStore._Record'] | list[tuple[int, 'MemStore._Record']] | None = None
         if self._insertion_order:
             if isinstance(slice_obj, int):
                 slice_start: int = slice_obj
@@ -108,6 +106,7 @@ class MemStore:
                 slice_step: int = slice_obj.step if slice_obj.step is not None else 1
             else:
                 raise ValueError('slice_obj must be an integer or slice object')
+            store: dict[int, 'MemStore._Record'] = self._store
             result_list: list[tuple[int, 'MemStore._Record']] = [
                 (record_id, store[record_id])
                 for record_id
@@ -117,21 +116,27 @@ class MemStore:
                 result = result_list
             elif result_list:
                 result = result_list[0]
+            else:
+                result = None
+        else:
+            result = None
         return result
 
     def update(self, record_id: int, value: dict[str, typing.Any]) -> bool:
         self._validate_value(value)
-        result: bool = False
         store: dict[int, 'MemStore._Record'] = self._store
         if record_id in store:
             old_record: 'MemStore._Record' = store[record_id]
-            new_values: list[typing.Any] = [value.get(field, old_record[i]) for i, field in enumerate(self._fields)]
-            new_record: 'MemStore._Record' = self._Record(*new_values)
+            new_record: 'MemStore._Record' = self._Record(
+                *(value.get(field, old_record[i]) for i, field in enumerate(self._fields))
+            )
             affected_fields: set[str] = set(value.keys())
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
             store[record_id] = new_record
             self._update_affected_indexes(record_id, new_record, affected_fields)
-            result = True
+            result: bool = True
+        else:
+            result: bool = False
         return result
 
     def update_by_index(
@@ -156,11 +161,9 @@ class MemStore:
         return result
 
     def delete(self, record_id: int) -> bool:
-        result: bool = False
         store: dict[int, 'MemStore._Record'] = self._store
         if record_id in store:
-            value: 'MemStore._Record' = store[record_id]
-            self._remove_from_indexes(record_id, value)
+            self._remove_from_indexes(record_id, store[record_id])
             del store[record_id]
             if record_id in self._inserted_set:
                 node: llist.dllistnode = self._inserted_nodes[record_id]
@@ -168,11 +171,12 @@ class MemStore:
                 del self._inserted_nodes[record_id]
                 self._inserted_set.remove(record_id)
             result = True
+        else:
+            result = False
         return result
 
     def all(self) -> list[tuple[int, 'MemStore._Record']]:
-        result: list[tuple[int, 'MemStore._Record']] = list(self._store.items())
-        return result
+        return list(self._store.items())
 
     def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> typing.Any:
         if isinstance(fields, str):
@@ -201,33 +205,30 @@ class MemStore:
                 del indexes[index_to_drop]
 
     def _find_best_index(self, fields: str | tuple[str, ...]) -> str | tuple[str, ...] | None:
-        result: str | tuple[str, ...] | None = None
         for index_fields in self._indexes:
             if index_fields == fields:
                 result = index_fields
                 break
+        else:
+            result = None
         return result
 
     def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
-        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
-        for fields in indexes:
-            indexes[fields][self._get_index_value(fields, value)].add(record_id)
+        for fields, index in self._indexes.items():
+            index[self._get_index_value(fields, value)].add(record_id)
 
     def _remove_from_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
-        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
-        for fields in indexes:
+        for fields, index in self._indexes.items():
             index_value: typing.Any = self._get_index_value(fields, value)
-            field_index: dict[typing.Any, set[int]] = indexes[fields]
-            if record_id in field_index[index_value]:
-                field_index[index_value].remove(record_id)
-                if not field_index[index_value]:
-                    del field_index[index_value]
+            if record_id in index[index_value]:
+                index[index_value].remove(record_id)
+                if not index[index_value]:
+                    del index[index_value]
 
     def _update_affected_indexes(self, record_id: int, value: 'MemStore._Record', affected_fields: set[str]) -> None:
-        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
-        for fields in indexes:
+        for fields, index in self._indexes.items():
             if any(field in affected_fields for field in (fields if isinstance(fields, tuple) else (fields,))):
-                indexes[fields][self._get_index_value(fields, value)].add(record_id)
+                index[self._get_index_value(fields, value)].add(record_id)
 
     def _remove_from_affected_indexes(
             self,
@@ -235,12 +236,10 @@ class MemStore:
             value: 'MemStore._Record',
             affected_fields: set[str],
     ) -> None:
-        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
-        for fields in indexes:
+        for fields, index in self._indexes.items():
             if any(field in affected_fields for field in (fields if isinstance(fields, tuple) else (fields,))):
                 index_value: typing.Any = self._get_index_value(fields, value)
-                field_index: dict[typing.Any, set[int]] = indexes[fields]
-                if record_id in field_index[index_value]:
-                    field_index[index_value].remove(record_id)
-                    if not field_index[index_value]:
-                        del field_index[index_value]
+                if record_id in index[index_value]:
+                    index[index_value].remove(record_id)
+                    if not index[index_value]:
+                        del index[index_value]
