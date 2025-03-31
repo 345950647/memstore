@@ -203,20 +203,16 @@ class MemStore:
         return result
 
     def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> typing.Any:
-        field_indices: dict[str, int] = self._field_indices
         if isinstance(fields, str):
-            result: typing.Any = value[field_indices[fields]]
+            result: typing.Any = value[self._field_indices[fields]]
         else:
-            indices: list[int] = [field_indices[field] for field in fields]
-            result: tuple[typing.Any, ...] = tuple(value[i] for i in indices)
+            result: tuple[typing.Any, ...] = tuple(value[i] for i in (self._field_indices[field] for field in fields))
         return result
 
     def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for fields in indexes:
-            index_value: typing.Any = self._get_index_value(fields, value)
-            _ = indexes[fields]
-            indexes[fields][index_value].add(record_id)
+            indexes[fields][self._get_index_value(fields, value)].add(record_id)
 
     def _remove_from_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
@@ -232,9 +228,7 @@ class MemStore:
         indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for fields in indexes:
             if any(field in affected_fields for field in (fields if isinstance(fields, tuple) else (fields,))):
-                index_value: typing.Any = self._get_index_value(fields, value)
-                _ = indexes[fields]
-                indexes[fields][index_value].add(record_id)
+                indexes[fields][self._get_index_value(fields, value)].add(record_id)
 
     def _remove_from_affected_indexes(
             self,
