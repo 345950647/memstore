@@ -8,14 +8,11 @@ import typing
 class MemStore:
     def __init__(
             self,
-            fields: list[str],
             indexes: list[str | tuple[str, ...]] | None = None,
     ) -> None:
-        self._record_class = collections.namedtuple('Record', fields)
-        self._fields: tuple[str, ...] = tuple(fields)
-        self._data: dict[int, typing.Any] = {}
+        self._data: dict[int, dict] = {}
         self._indexes: dict[
-            str,
+            typing.Any,
             dict[typing.Any, set[int]],
         ] = collections.defaultdict(lambda: collections.defaultdict(set))
         self._ident_counter: itertools.count = itertools.count()
@@ -24,28 +21,27 @@ class MemStore:
 
     def insert(
             self,
-            values: dict[str, typing.Any],
+            values: dict,
     ) -> int:
         ident = next(self._ident_counter)
-        record = self._record_class(*(values[field] if field in values else None for field in self._fields))
-        self._data[ident] = record
-        [index[record[field]].add(ident) for field, index in self._indexes.items()]
+        self._data[ident] = values
+        [index[values.get(field)].add(ident) for field, index in self._indexes.items()]
         return ident
 
     def insert_many(
             self,
-            values: list[dict[str, typing.Any]],
+            values: list[dict],
     ) -> list[int]:
         return [self.insert(value) for value in values]
 
-    def get(self, ident: int) -> typing.Any | None:
+    def get(self, ident: int) -> dict | None:
         return self._data.get(ident)
 
     def get_by_index(
             self,
-            field: str,
+            field: typing.Any,
             value: typing.Any,
-    ) -> list[tuple[int, typing.Any]]:
+    ) -> list[tuple[int, dict]]:
         indexes = self._indexes
         if field in indexes:
             index = indexes[field]
@@ -58,7 +54,7 @@ class MemStore:
             result = []
         return result
 
-    def all(self) -> list[tuple[int, typing.Any]]:
+    def all(self) -> list[tuple[int, dict]]:
         return list(self._data.items())
 
     def delete(
@@ -83,7 +79,7 @@ class MemStore:
 
     def add_index(
             self,
-            field: str,
+            field: typing.Any,
     ) -> None:
         indexes = self._indexes
         if field not in indexes:
@@ -92,7 +88,7 @@ class MemStore:
 
     def drop_index(
             self,
-            field: str,
+            field: typing.Any,
     ) -> None:
         indexes = self._indexes
         if field in indexes:
