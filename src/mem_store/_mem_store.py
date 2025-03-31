@@ -4,8 +4,6 @@ import collections
 import itertools
 import typing
 
-import llist
-
 
 class MemStore:
     _Record: collections.namedtuple
@@ -19,9 +17,6 @@ class MemStore:
             lambda: collections.defaultdict(set),
         )
         self._id_counter: itertools.count = itertools.count()
-        self._insertion_order: llist.dllist = llist.dllist()
-        self._inserted_nodes: dict[int, llist.dllistnode] = {}
-        self._inserted_set: set[int] = set()
         if indexes:
             for index in indexes:
                 self.add_index(index)
@@ -56,8 +51,6 @@ class MemStore:
         record = self._Record(*(value[field] for field in self._fields))
         self._store[new_id] = record
         self._update_indexes(new_id, record)
-        self._inserted_nodes[new_id] = self._insertion_order.append(new_id)
-        self._inserted_set.add(new_id)
         return new_id
 
     def insert_many(self, values: list[dict[str, typing.Any]]) -> list[int]:
@@ -79,36 +72,12 @@ class MemStore:
                 store = self._store
                 result = [
                     (i, store[i]) for i
-                    in index[field_value]
-                    if i in store and store[i][field_indices[field]] == field_value
+                    in index[field_value] if i in store and store[i][field_indices[field]] == field_value
                 ]
             else:
                 result = []
         else:
             result = []
-        return result
-
-    def get_by_insertion_order(
-            self,
-            obj: int | slice = -1,
-    ) -> tuple[int, 'MemStore._Record'] | list[tuple[int, 'MemStore._Record']] | None:
-        if self._insertion_order:
-            if isinstance(obj, int):
-                start = obj
-                stop = obj + 1 if obj >= 0 else None
-                step = 1
-            elif isinstance(obj, slice):
-                start = obj.start
-                stop = obj.stop
-                step = obj.step if obj.step is not None else 1
-            else:
-                raise ValueError('slice_obj must be an integer or slice object')
-            store = self._store
-            result = [(i, store[i]) for i in list(self._insertion_order)[start:stop:step]]
-            if not isinstance(obj, slice):
-                result = result[0]
-        else:
-            result = None
         return result
 
     def _remove_from_affected_indexes(
@@ -188,10 +157,6 @@ class MemStore:
         if id_ in store:
             self._remove_from_indexes(id_, store[id_])
             del store[id_]
-            if id_ in self._inserted_set:
-                self._insertion_order.remove(self._inserted_nodes[id_])
-                del self._inserted_nodes[id_]
-                self._inserted_set.remove(id_)
             result = True
         else:
             result = False
