@@ -64,19 +64,17 @@ class MemStore:
                 store: dict[int, 'MemStore._Record'] = self._store
                 if isinstance(fields, str):
                     result = [
-                        (record_id, store[record_id])
-                        for record_id
+                        (i, store[i])
+                        for i
                         in index[field_values]
-                        if record_id in store and store[record_id][field_indices[fields]] == field_values
+                        if i in store and store[i][field_indices[fields]] == field_values
                     ]
                 else:
                     result = [
-                        (record_id, store[record_id])
-                        for record_id
+                        (i, store[i])
+                        for i
                         in index[field_values]
-                        if record_id in store and all(
-                            store[record_id][field_indices[f]] == v for f, v in zip(fields, field_values)
-                        )
+                        if i in store and all(store[i][field_indices[f]] == v for f, v in zip(fields, field_values))
                     ]
             else:
                 result = []
