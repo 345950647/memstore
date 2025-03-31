@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import itertools
+import typing
 
 import llist
 
@@ -14,7 +15,7 @@ class MemStore:
         self._field_indices: dict[str, int] = {field: i for i, field in enumerate(fields)}
         self._Record: collections.namedtuple = collections.namedtuple('Record', fields)
         self._store: dict[int, 'MemStore._Record'] = {}
-        self._indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = collections.defaultdict(
+        self._indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = collections.defaultdict(
             lambda: collections.defaultdict(set),
         )
         self._id_counter: itertools.count = itertools.count()
@@ -25,7 +26,7 @@ class MemStore:
             for index in indexes:
                 self.add_index(index)
 
-    def _validate_value(self, value: dict[str, object], require_all_fields: bool = False) -> None:
+    def _validate_value(self, value: dict[str, typing.Any], require_all_fields: bool = False) -> None:
         if not isinstance(value, dict):
             raise ValueError('Value must be a dictionary')
         value_fields: set[str] = set(value.keys())
@@ -45,12 +46,8 @@ class MemStore:
             raise ValueError(f'Index fields must be in {self._fields}')
         return result
 
-    def insert(
-            self,
-            value: dict[str, object],
-            require_all_fields: bool = True,
-    ) -> int:
-        self._validate_value(value, require_all_fields=require_all_fields)
+    def insert(self, value: dict[str, typing.Any]) -> int:
+        self._validate_value(value, require_all_fields=True)
         fields: tuple[str, ...] = self._fields
         store: dict[int, 'MemStore._Record'] = self._store
         id_counter: itertools.count = self._id_counter
@@ -63,18 +60,14 @@ class MemStore:
         self._inserted_set.add(new_id)
         return new_id
 
-    def insert_many(
-            self,
-            values: list[dict[str, object]],
-            require_all_fields: bool = True,
-    ) -> list[int]:
+    def insert_many(self, values: list[dict[str, typing.Any]]) -> list[int]:
         result: list[int] = []
         fields: tuple[str, ...] = self._fields
         store: dict[int, 'MemStore._Record'] = self._store
         id_counter: itertools.count = self._id_counter
         Record: collections.namedtuple = self._Record
         for value in values:
-            self._validate_value(value, require_all_fields=require_all_fields)
+            self._validate_value(value, require_all_fields=True)
             new_id: int = next(id_counter)
             record: 'MemStore._Record' = Record(*(value[field] for field in fields))
             store[new_id] = record
@@ -121,14 +114,14 @@ class MemStore:
                 result = result_list[0]
         return result
 
-    def update(self, record_id: int, value: dict[str, object]) -> bool:
+    def update(self, record_id: int, value: dict[str, typing.Any]) -> bool:
         result: bool = False
         store: dict[int, 'MemStore._Record'] = self._store
         fields: tuple[str, ...] = self._fields
         self._validate_value(value)
         if record_id in store:
             old_record: 'MemStore._Record' = store[record_id]
-            new_values: list[object] = [value.get(field, old_record[i]) for i, field in enumerate(fields)]
+            new_values: list[typing.Any] = [value.get(field, old_record[i]) for i, field in enumerate(fields)]
             new_record: 'MemStore._Record' = self._Record(*new_values)
             affected_fields: set[str] = set(value.keys())
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
@@ -140,8 +133,8 @@ class MemStore:
     def update_by_index(
             self,
             fields: str | tuple[str, ...],
-            field_values: object | tuple[object, ...],
-            update_values: dict[str, object],
+            field_values: typing.Any | tuple[typing.Any, ...],
+            update_values: dict[str, typing.Any],
     ) -> int:
         result: int = 0
         store: dict[int, 'MemStore._Record'] = self._store
@@ -149,7 +142,11 @@ class MemStore:
         matches: list[tuple[int, 'MemStore._Record']] = self.get_by_index(fields, field_values)
         affected_fields: set[str] = set(update_values.keys())
         for record_id, old_record in matches:
-            new_values: list[object] = [update_values.get(field, old_record[i]) for i, field in enumerate(self._fields)]
+            new_values: list[typing.Any] = [
+                update_values.get(field, old_record[i])
+                for i, field
+                in enumerate(self._fields)
+            ]
             new_record: 'MemStore._Record' = self._Record(*new_values)
             self._remove_from_affected_indexes(record_id, old_record, affected_fields)
             store[record_id] = new_record
@@ -179,12 +176,12 @@ class MemStore:
 
     def add_index(self, fields: str | tuple[str, ...]) -> None:
         fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         if fields_tuple not in indexes:
             _ = indexes[fields_tuple]
             store: dict[int, 'MemStore._Record'] = self._store
             for record_id, value in store.items():
-                index_value: object = self._get_index_value(fields_tuple, value)
+                index_value: typing.Any = self._get_index_value(fields_tuple, value)
                 indexes[fields_tuple][index_value].add(record_id)
 
     def drop_index(self, fields: str | tuple[str, ...]) -> None:
@@ -193,7 +190,7 @@ class MemStore:
         except ValueError:
             pass
         else:
-            indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+            indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
             index_to_drop: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
             if index_to_drop and index_to_drop in indexes:
                 del indexes[index_to_drop]
@@ -201,19 +198,21 @@ class MemStore:
     def get_by_index(
             self,
             fields: str | tuple[str, ...],
-            field_values: object | tuple[object, ...],
+            field_values: typing.Any | tuple[typing.Any, ...],
     ) -> list[tuple[int, 'MemStore._Record']]:
         result: list[tuple[int, 'MemStore._Record']] = []
         fields_tuple: str | tuple[str, ...] = self._normalize_fields(fields)
-        field_values_tuple: tuple[object, ...] = field_values if isinstance(field_values, tuple) else (field_values,)
+        field_values_tuple: tuple[typing.Any, ...] = field_values if isinstance(field_values, tuple) else (
+            field_values,)
         if len((fields_tuple,) if isinstance(fields_tuple, str) else fields_tuple) != len(field_values_tuple):
             raise ValueError('Fields and values must have the same length')
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         store: dict[int, 'MemStore._Record'] = self._store
         field_indices: dict[str, int] = self._field_indices
         best_index: str | tuple[str, ...] | None = self._find_best_index(fields_tuple)
         if best_index:
-            index_values: object = field_values_tuple[0] if isinstance(fields_tuple, str) else tuple(field_values_tuple)
+            index_values: typing.Any = field_values_tuple[0] if isinstance(fields_tuple, str) else tuple(
+                field_values_tuple)
             if index_values in indexes[best_index]:
                 record_ids: set[int] = indexes[best_index][index_values]
                 result = [(record_id, store[record_id]) for record_id in record_ids if record_id in store and all(
@@ -225,44 +224,44 @@ class MemStore:
 
     def _find_best_index(self, fields: str | tuple[str, ...]) -> str | tuple[str, ...] | None:
         result: str | tuple[str, ...] | None = None
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for index_fields in indexes:
             if index_fields == fields:
                 result = index_fields
                 break
         return result
 
-    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> object:
+    def _get_index_value(self, fields: str | tuple[str, ...], value: 'MemStore._Record') -> typing.Any:
         field_indices: dict[str, int] = self._field_indices
         if isinstance(fields, str):
-            result: object = value[field_indices[fields]]
+            result: typing.Any = value[field_indices[fields]]
         else:
             indices: list[int] = [field_indices[field] for field in fields]
-            result: tuple[object, ...] = tuple(value[i] for i in indices)
+            result: tuple[typing.Any, ...] = tuple(value[i] for i in indices)
         return result
 
     def _update_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for fields in indexes:
-            index_value: object = self._get_index_value(fields, value)
+            index_value: typing.Any = self._get_index_value(fields, value)
             _ = indexes[fields]
             indexes[fields][index_value].add(record_id)
 
     def _remove_from_indexes(self, record_id: int, value: 'MemStore._Record') -> None:
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for fields in indexes:
-            index_value: object = self._get_index_value(fields, value)
-            field_index: dict[object, set[int]] = indexes[fields]
+            index_value: typing.Any = self._get_index_value(fields, value)
+            field_index: dict[typing.Any, set[int]] = indexes[fields]
             if record_id in field_index[index_value]:
                 field_index[index_value].remove(record_id)
                 if not field_index[index_value]:
                     del field_index[index_value]
 
     def _update_affected_indexes(self, record_id: int, value: 'MemStore._Record', affected_fields: set[str]) -> None:
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for fields in indexes:
             if any(field in affected_fields for field in (fields if isinstance(fields, tuple) else (fields,))):
-                index_value: object = self._get_index_value(fields, value)
+                index_value: typing.Any = self._get_index_value(fields, value)
                 _ = indexes[fields]
                 indexes[fields][index_value].add(record_id)
 
@@ -272,11 +271,11 @@ class MemStore:
             value: 'MemStore._Record',
             affected_fields: set[str],
     ) -> None:
-        indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = self._indexes
+        indexes: dict[str | tuple[str, ...], dict[typing.Any, set[int]]] = self._indexes
         for fields in indexes:
             if any(field in affected_fields for field in (fields if isinstance(fields, tuple) else (fields,))):
-                index_value: object = self._get_index_value(fields, value)
-                field_index: dict[object, set[int]] = indexes[fields]
+                index_value: typing.Any = self._get_index_value(fields, value)
+                field_index: dict[typing.Any, set[int]] = indexes[fields]
                 if record_id in field_index[index_value]:
                     field_index[index_value].remove(record_id)
                     if not field_index[index_value]:
