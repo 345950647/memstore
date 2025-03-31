@@ -8,7 +8,7 @@ import typing
 class MemStore:
     def __init__(
             self,
-            indexes: list[str | tuple[str, ...]] | None = None,
+            indexes: list[typing.Any] | None = None,
     ) -> None:
         self._data: dict[int, dict] = {}
         self._indexes: dict[
@@ -16,7 +16,7 @@ class MemStore:
             dict[typing.Any, set[int]],
         ] = collections.defaultdict(lambda: collections.defaultdict(set))
         self._ident_counter: itertools.count = itertools.count()
-        if indexes:
+        if indexes is not None:
             [self.add_index(index) for index in indexes]
 
     def insert(
