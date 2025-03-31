@@ -61,12 +61,13 @@ class MemStore:
         if ident in data:
             values = data[ident]
             for field, index in self._indexes.items():
-                value = values[field]
-                idents = index[value]
-                if ident in idents:
-                    idents.remove(ident)
-                    if not idents:
-                        del index[value]
+                if field in values:
+                    value = values[field]
+                    idents = index[value]
+                    if ident in idents:
+                        idents.remove(ident)
+                        if not idents:
+                            del index[value]
             del data[ident]
             result = True
         else:
