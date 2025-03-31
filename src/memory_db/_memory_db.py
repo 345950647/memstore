@@ -15,7 +15,8 @@ class MemoryDB:
         self._Record: collections.namedtuple = collections.namedtuple('Record', fields)
         self._store: dict[int, 'MemoryDB._Record'] = {}
         self._indexes: dict[str | tuple[str, ...], dict[object, set[int]]] = collections.defaultdict(
-            lambda: collections.defaultdict(set))
+            lambda: collections.defaultdict(set),
+        )
         self._id_counter: itertools.count = itertools.count()
         self._insertion_order: llist.dllist = llist.dllist()
         self._inserted_nodes: dict[int, llist.dllistnode] = {}
