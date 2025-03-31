@@ -7,10 +7,10 @@ by insertion order. It uses `collections.namedtuple` for records and `llist.dlli
 
 ## Installation
 
-To use `MemStore`, install the required dependency:
+To install `MemStore`:
 
 ```shell
-pip install llist
+pip install mem-store
 ```
 
 ---
