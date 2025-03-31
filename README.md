@@ -1,13 +1,13 @@
-# MemoryDB
+# MemStore
 
-`MemoryDB` is a lightweight in-memory database written in Python. It supports key-value storage, indexing, and retrieval
+`MemStore` is a lightweight in-memory database written in Python. It supports key-value storage, indexing, and retrieval
 by insertion order. It uses `collections.namedtuple` for records and `llist.dllist` to maintain insertion order.
 
 ---
 
 ## Installation
 
-To use `MemoryDB`, install the required dependency:
+To use `MemStore`, install the required dependency:
 
 ```shell
 pip install llist
