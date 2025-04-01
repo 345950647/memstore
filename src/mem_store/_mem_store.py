@@ -10,7 +10,7 @@ class MemStore:
             self,
             indexes: list[typing.Any] | None = None,
     ) -> None:
-        self._data: dict[int, dict] = {}
+        self._data: dict[int, dict[typing.Any, typing.Any]] = {}
         self._indexes: dict[
             typing.Any,
             dict[typing.Any, set[int]],
@@ -30,18 +30,18 @@ class MemStore:
 
     def insert_many(
             self,
-            values: list[dict],
+            values: list[dict[typing.Any, typing.Any]],
     ) -> list[int]:
         return [self.insert(value) for value in values]
 
-    def get(self, ident: int) -> dict | None:
+    def get(self, ident: int) -> dict[typing.Any, typing.Any] | None:
         return self._data.get(ident)
 
     def get_by_index(
             self,
             field: typing.Any,
             value: typing.Any,
-    ) -> list[tuple[int, dict]]:
+    ) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
         index = self._indexes[field]
         if value in index:
             data = self._data
@@ -50,7 +50,7 @@ class MemStore:
             result = []
         return result
 
-    def all(self) -> list[tuple[int, dict]]:
+    def all(self) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
         return list(self._data.items())
 
     def delete(
