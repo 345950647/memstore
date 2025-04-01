@@ -1,5 +1,5 @@
 [project]
-name = "mem-store"
+name = "memstore"
 version = "0.2.3"
 description = ""
 authors = [

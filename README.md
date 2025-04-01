@@ -23,7 +23,7 @@ pip install mem-store
 Create a database with optional indexes:
 
 ```python
-from mem_store import MemStore
+from memstore import MemStore
 
 # Initialize with indexes on 'name' and 'age'
 db = MemStore(indexes=['name', 'age'])
