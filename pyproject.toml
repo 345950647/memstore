@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [tool.poetry]
-packages = [{ include = "mem_store", from = "src" }]
+packages = [{ include = "memstore", from = "src" }]
 
 
 [tool.poetry.group.dev.dependencies]
