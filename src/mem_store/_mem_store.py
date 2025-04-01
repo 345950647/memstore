@@ -19,7 +19,7 @@ class MemStore:
         if indexes is not None:
             [self.add_index(index) for index in indexes]
 
-    def insert(
+    def add(
             self,
             values: dict,
     ) -> int:
@@ -27,12 +27,6 @@ class MemStore:
         self._data[ident] = values
         [index[values[field]].add(ident) for field, index in self._indexes.items() if field in values]
         return ident
-
-    def insert_many(
-            self,
-            values: list[dict[typing.Any, typing.Any]],
-    ) -> list[int]:
-        return [self.insert(value) for value in values]
 
     def get(self, ident: int) -> dict[typing.Any, typing.Any] | None:
         return self._data.get(ident)

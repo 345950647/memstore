@@ -34,7 +34,7 @@ Add single or multiple records:
 
 ```python
 # Insert a single record
-record_id = db.insert({'name': 'Alice', 'age': 25, 'city': 'New York'})
+record_id = db.add({'name': 'Alice', 'age': 25, 'city': 'New York'})
 print(f"Inserted record with ID: {record_id}")  # Output: Inserted record with ID: 0
 
 # Insert multiple records
