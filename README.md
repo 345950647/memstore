@@ -1,7 +1,8 @@
 # MemStore
 
 `MemStore` is a lightweight in-memory database written in Python. It supports key-value storage with integer IDs,
-single-field indexing, and filtering by field values. It uses dictionaries for data storage and retrieval.
+single-field indexing, filtering by field values, and slicing records using integer-based positions. It uses
+dictionaries for data storage and retrieval.
 
 ---
 
@@ -75,17 +76,53 @@ for record_id, record in all_records:
 # ID 1: {'name': 'Bob', 'age': 30, 'city': 'Boston'}
 ```
 
-### 5. Delete Records
+### 5. Slice Records
+
+Retrieve a subset of records using integer-based slicing with `islice`:
+
+```python
+# Add more records for slicing examples
+db.add({'name': 'Charlie', 'age': 35, 'city': 'Chicago'})
+db.add({'name': 'David', 'age': 40, 'city': 'Seattle'})
+
+# Slice from start to position 2 (exclusive)
+slice_1 = list(db.islice(stop=2))
+print(slice_1)
+# Output: [(0, {'name': 'Alice', 'age': 25, 'city': 'New York'}),
+#          (1, {'name': 'Bob', 'age': 30, 'city': 'Boston'})]
+
+# Slice from position 1 to 3
+slice_2 = list(db.islice(1, 3))
+print(slice_2)
+# Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'}),
+#          (2, {'name': 'Charlie', 'age': 35, 'city': 'Chicago'})]
+
+# Slice with step (every second record)
+slice_3 = list(db.islice(0, None, 2))
+print(slice_3)
+# Output: [(0, {'name': 'Alice', 'age': 25, 'city': 'New York'}),
+#          (2, {'name': 'Charlie', 'age': 35, 'city': 'Chicago'})]
+
+# Slice with negative indexes (last two records)
+slice_4 = list(db.islice(-2, None))
+print(slice_4)
+# Output: [(2, {'name': 'Charlie', 'age': 35, 'city': 'Chicago'}),
+#          (3, {'name': 'David', 'age': 40, 'city': 'Seattle'})]
+```
+
+### 6. Delete Records
 
 Remove a record by ID:
 
 ```python
 success = db.delete(0)
 print(f"Delete successful: {success}")  # Output: Delete successful: True
-print(db.all())  # Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'})]
+print(db.all())  # Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'}),
+#                           (2, {'name': 'Charlie', 'age': 35, 'city': 'Chicago'}),
+#                           (3, {'name': 'David', 'age': 40, 'city': 'Seattle'})]
 ```
 
-### 6. Manage Indexes
+### 7. Manage Indexes
 
 Add or remove indexes dynamically:
 
@@ -107,6 +144,8 @@ print('name' in db._indexes)  # Output: False
 - **Indexes**: Only single-field indexes are supported (e.g., `'name'`). Composite indexes are not available.
 - **Filtering**: The `filter` method retrieves records matching all specified field-value pairs, using indexes when
   available for efficiency. It works with both indexed and non-indexed fields.
+- **Slicing**: The `islice` method allows positional slicing of records using integer indexes (positive or negative),
+  supporting `start`, `stop`, and `step` parameters. It returns an iterator, which can be converted to a list if needed.
 - **Limitations**: No field validation or update methods are provided. Deletion and retrieval are ID-based or
   filter-based only.
 - **Dependencies**: Uses only Python standard library modules (`collections`, `functools`, `itertools`, `operator`,

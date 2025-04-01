@@ -1,6 +1,6 @@
 [project]
 name = "memstore"
-version = "0.2.5"
+version = "0.2.5.1"
 description = ""
 authors = [
     { name = "Chang Cheng", email = "changcheng@bwbtech.net" },
