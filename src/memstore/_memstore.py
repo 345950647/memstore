@@ -45,6 +45,11 @@ class MemStore:
         )))]
         return result
 
+    def islice(self, start=None, stop=None, step=None) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
+        data = self._data
+        result = list(itertools.islice(data.items(), *slice(start, stop, step).indices(len(data))))
+        return result
+
     def all(self) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
         return list(self._data.items())
 
