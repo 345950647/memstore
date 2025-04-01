@@ -11,7 +11,7 @@ Since `MemStore` is a single-class implementation, you can simply include it in 
 installation is required. Alternatively, if packaged:
 
 ```shell
-pip install mem-store
+pip install memstore
 ```
 
 ---
