@@ -7,6 +7,33 @@ import operator
 import typing
 
 
+class ILoc:
+    def __init__(
+            self,
+            store: 'MemStore',
+    ):
+        self.store = store
+
+    def __getitem__(
+            self,
+            item: int | slice,
+    ) -> dict[typing.Any, typing.Any] | list[tuple[int, dict[typing.Any, typing.Any]]] | None:
+        if isinstance(item, int):
+            if item == -1:
+                item = self.store.islice(start=item)
+            else:
+                item = self.store.islice(start=item, stop=item + 1)
+            if item:
+                item = item[0][1]
+            else:
+                item = None
+        elif isinstance(item, slice):
+            item = self.store.islice(start=item.start, stop=item.stop, step=item.step)
+        else:
+            raise TypeError(f'Expected int or slice, got {type(item).__name__}')
+        return item
+
+
 class MemStore:
     def __init__(
             self,
@@ -49,6 +76,10 @@ class MemStore:
         data = self._data
         result = list(itertools.islice(data.items(), *slice(start, stop, step).indices(len(data))))
         return result
+
+    @functools.cached_property
+    def iloc(self) -> ILoc:
+        return ILoc(self)
 
     def all(self) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
         return list(self._data.items())

@@ -76,7 +76,7 @@ for record_id, record in all_records:
 # ID 1: {'name': 'Bob', 'age': 30, 'city': 'Boston'}
 ```
 
-### 5. Slice Records
+### 5. Slice Records with `islice`
 
 Retrieve a subset of records using integer-based slicing with `islice`:
 
@@ -110,7 +110,33 @@ print(slice_4)
 #          (3, {'name': 'David', 'age': 40, 'city': 'Seattle'})]
 ```
 
-### 6. Delete Records
+### 6. Access Records with `iloc`
+
+Retrieve records by integer position using `iloc`, supporting both single index and slice operations:
+
+```python
+# Get a single record by position
+record = db.iloc[1]
+print(record)  # Output: {'name': 'Bob', 'age': 30, 'city': 'Boston'}
+
+# Get the last record using negative index
+last_record = db.iloc[-1]
+print(last_record)  # Output: {'name': 'David', 'age': 40, 'city': 'Seattle'}
+
+# Slice records with iloc
+slice_iloc = db.iloc[1:3]
+print(slice_iloc)
+# Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'}),
+#          (2, {'name': 'Charlie', 'age': 35, 'city': 'Chicago'})]
+
+# Slice with step using iloc
+slice_step = db.iloc[0::2]
+print(slice_step)
+# Output: [(0, {'name': 'Alice', 'age': 25, 'city': 'New York'}),
+#          (2, {'name': 'Charlie', 'age': 35, 'city': 'Chicago'})]
+```
+
+### 7. Delete Records
 
 Remove a record by ID:
 
@@ -122,7 +148,7 @@ print(db.all())  # Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'}),
 #                           (3, {'name': 'David', 'age': 40, 'city': 'Seattle'})]
 ```
 
-### 7. Manage Indexes
+### 8. Manage Indexes
 
 Add or remove indexes dynamically:
 
@@ -144,8 +170,11 @@ print('name' in db._indexes)  # Output: False
 - **Indexes**: Only single-field indexes are supported (e.g., `'name'`). Composite indexes are not available.
 - **Filtering**: The `filter` method retrieves records matching all specified field-value pairs, using indexes when
   available for efficiency. It works with both indexed and non-indexed fields.
-- **Slicing**: The `islice` method allows positional slicing of records using integer indexes (positive or negative),
-  supporting `start`, `stop`, and `step` parameters. It returns an iterator, which can be converted to a list if needed.
+- **Slicing with `islice`**: The `islice` method allows positional slicing of records using integer indexes (positive or
+  negative), supporting `start`, `stop`, and `step` parameters. It returns a list of `(id, record)` tuples.
+- **Positional Access with `iloc`**: The `iloc` property provides a pandas-like interface for accessing records by
+  integer position. It supports single integer indexing (returns a record dictionary) and slicing (returns a list of
+  `(id, record)` tuples).
 - **Limitations**: No field validation or update methods are provided. Deletion and retrieval are ID-based or
   filter-based only.
 - **Dependencies**: Uses only Python standard library modules (`collections`, `functools`, `itertools`, `operator`,
