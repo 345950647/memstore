@@ -1,6 +1,6 @@
 import unittest
 
-from mem_store import MemStore
+from mem_store import MemStore  # Assuming the class is in a file named memstore.py
 
 
 class TestMemStore(unittest.TestCase):
@@ -15,15 +15,36 @@ class TestMemStore(unittest.TestCase):
     def test_get_nonexistent(self):
         self.assertIsNone(self.db.get(999))
 
-    def test_get_by_index(self):
+    def test_filter_with_index(self):
         self.db.add({'name': 'Alice', 'age': 25})
         self.db.add({'name': 'Bob', 'age': 25})
-        results = self.db.get_by_index('name', 'Alice')
-        self.assertEqual(len(results), 1)
+        self.db.add({'name': 'Alice', 'age': 30})
+        results = self.db.filter({'name': 'Alice'})
+        self.assertEqual(len(results), 2)
         self.assertEqual(results[0], (0, {'name': 'Alice', 'age': 25}))
+        self.assertEqual(results[1], (2, {'name': 'Alice', 'age': 30}))
 
-    def test_get_by_index_empty(self):
-        results = self.db.get_by_index('name', 'Charlie')
+    def test_filter_without_index(self):
+        self.db.add({'name': 'Alice', 'age': 25, 'city': 'New York'})
+        self.db.add({'name': 'Bob', 'age': 30, 'city': 'Boston'})
+        self.db.add({'name': 'Charlie', 'age': 35, 'city': 'New York'})
+        results = self.db.filter({'city': 'New York'})
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0], (0, {'name': 'Alice', 'age': 25, 'city': 'New York'}))
+        self.assertEqual(results[1], (2, {'name': 'Charlie', 'age': 35, 'city': 'New York'}))
+
+    def test_filter_multiple_conditions(self):
+        self.db.add({'name': 'Alice', 'age': 25, 'city': 'New York'})
+        self.db.add({'name': 'Alice', 'age': 25, 'city': 'Boston'})
+        self.db.add({'name': 'Alice', 'age': 30, 'city': 'New York'})
+        results = self.db.filter({'name': 'Alice', 'age': 25})
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0], (0, {'name': 'Alice', 'age': 25, 'city': 'New York'}))
+        self.assertEqual(results[1], (1, {'name': 'Alice', 'age': 25, 'city': 'Boston'}))
+
+    def test_filter_empty(self):
+        self.db.add({'name': 'Alice', 'age': 25, 'city': 'New York'})
+        results = self.db.filter({'city': 'Chicago'})
         self.assertEqual(results, [])
 
     def test_all(self):
@@ -44,7 +65,7 @@ class TestMemStore(unittest.TestCase):
         self.db.add({'name': 'Alice', 'age': 25})
         self.db.add_index('city')
         self.db.add({'name': 'Bob', 'age': 30, 'city': 'Boston'})
-        results = self.db.get_by_index('city', 'Boston')
+        results = self.db.filter({'city': 'Boston'})
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0], (1, {'name': 'Bob', 'age': 30, 'city': 'Boston'}))
 

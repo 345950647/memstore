@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import collections
+import functools
 import itertools
+import operator
 import typing
 
 
@@ -31,17 +33,16 @@ class MemStore:
     def get(self, ident: int) -> dict[typing.Any, typing.Any] | None:
         return self._data.get(ident)
 
-    def get_by_index(
+    def filter(
             self,
-            field: typing.Any,
-            value: typing.Any,
+            values: dict[typing.Any, typing.Any],
     ) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
-        index = self._indexes[field]
-        if value in index:
-            data = self._data
-            result = [(ident, data[ident]) for ident in index[value]]
-        else:
-            result = []
+        indexes = self._indexes
+        result = [(ident, self.get(ident)) for ident in sorted(functools.reduce(operator.and_, (
+            indexes[field].get(value, set()) if field in indexes
+            else {ident for ident, values in self._data.items() if field in values and values[field] == value}
+            for field, value in values.items()
+        )))]
         return result
 
     def all(self) -> list[tuple[int, dict[typing.Any, typing.Any]]]:

@@ -1,7 +1,7 @@
 # MemStore
 
 `MemStore` is a lightweight in-memory database written in Python. It supports key-value storage with integer IDs,
-single-field indexing, and basic CRUD operations. It uses dictionaries for data storage and retrieval.
+single-field indexing, and filtering by field values. It uses dictionaries for data storage and retrieval.
 
 ---
 
@@ -41,16 +41,24 @@ print(f"Inserted record with ID: {record_id}")  # Output: Inserted record with I
 
 ### 3. Query Records
 
-Retrieve records by ID or index:
+Retrieve records by ID or filter by field values:
 
 ```python
 # Get by ID
 record = db.get(0)
 print(record)  # Output: {'name': 'Alice', 'age': 25, 'city': 'New York'}
 
-# Get by index
-alice_records = db.get_by_index('name', 'Alice')
+# Filter by indexed field
+alice_records = db.filter({'name': 'Alice'})
 print(alice_records)  # Output: [(0, {'name': 'Alice', 'age': 25, 'city': 'New York'})]
+
+# Filter by non-indexed field
+ny_records = db.filter({'city': 'New York'})
+print(ny_records)  # Output: [(0, {'name': 'Alice', 'age': 25, 'city': 'New York'})]
+
+# Filter with multiple conditions (mixed indexed and non-indexed)
+alice_25_records = db.filter({'name': 'Alice', 'age': 25})
+print(alice_25_records)  # Output: [(0, {'name': 'Alice', 'age': 25, 'city': 'New York'})]
 ```
 
 ### 4. List All Records
@@ -84,7 +92,7 @@ Add or remove indexes dynamically:
 ```python
 # Add a new index
 db.add_index('city')
-print(db.get_by_index('city', 'Boston'))  # Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'})]
+print(db.filter({'city': 'Boston'}))  # Output: [(1, {'name': 'Bob', 'age': 30, 'city': 'Boston'})]
 
 # Drop an index
 db.drop_index('name')
@@ -97,6 +105,9 @@ print('name' in db._indexes)  # Output: False
 
 - **Data Structure**: Records are stored as dictionaries with integer IDs assigned sequentially.
 - **Indexes**: Only single-field indexes are supported (e.g., `'name'`). Composite indexes are not available.
+- **Filtering**: The `filter` method retrieves records matching all specified field-value pairs, using indexes when
+  available for efficiency. It works with both indexed and non-indexed fields.
 - **Limitations**: No field validation or update methods are provided. Deletion and retrieval are ID-based or
-  index-based only.
-- **Dependencies**: Uses only Python standard library modules (`collections`, `itertools`, `typing`).
+  filter-based only.
+- **Dependencies**: Uses only Python standard library modules (`collections`, `functools`, `itertools`, `operator`,
+  `typing`).
