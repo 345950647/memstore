@@ -1,6 +1,6 @@
 import unittest
 
-from mem_store import MemStore  # Assuming the class is in a file named memstore.py
+from mem_store import MemStore
 
 
 class TestMemStore(unittest.TestCase):
