@@ -87,9 +87,11 @@ class MemStore:
             self,
             ident: int,
     ) -> bool:
-        data = self._data
-        if ident in data:
-            values = data[ident]
+        try:
+            values = self._data.pop(ident)
+        except KeyError:
+            result = False
+        else:
             for field, index in self._indexes.items():
                 if field in values:
                     value = values[field]
@@ -98,10 +100,7 @@ class MemStore:
                         idents.remove(ident)
                         if not idents:
                             del index[value]
-            del data[ident]
             result = True
-        else:
-            result = False
         return result
 
     def add_index(
