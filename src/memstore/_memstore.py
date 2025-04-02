@@ -117,6 +117,7 @@ class MemStore:
             self,
             field: typing.Any,
     ) -> None:
-        indexes = self._indexes
-        if field in indexes:
-            del indexes[field]
+        try:
+            del self._indexes[field]
+        except KeyError:
+            pass
