@@ -212,5 +212,4 @@ print('name' in db._indexes)  # Output: False
   slicing (returns a list of `(id, record)` tuples).
 - **Limitations**: No field validation or update methods are provided. Deletion and retrieval are ID-based or
   filter-based only.
-- **Dependencies**: Uses only Python standard library modules (`collections`, `functools`, `itertools`, `operator`,
-  `typing`).
+- **Dependencies**: Uses only Python standard library modules.
