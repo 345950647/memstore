@@ -59,17 +59,46 @@ class MemStore:
     def get(self, ident: int) -> dict[typing.Any, typing.Any] | None:
         return self._data.get(ident)
 
+    def _filter(
+            self,
+            values: dict[typing.Any, typing.Any],
+    ) -> set[int]:
+        indexes = self._indexes
+        idents = set.intersection(*(
+            indexes[field].get(value, set()) if field in indexes
+            else {ident for ident, values in self._data.items() if field in values and values[field] == value}
+            for field, value in values.items()
+        ))
+        return idents
+
     def filter(
             self,
             values: dict[typing.Any, typing.Any],
     ) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
         data = self._data
-        indexes = self._indexes
-        result = [(ident, data[ident]) for ident in sorted(set.intersection(*(
-            indexes[field].get(value, set()) if field in indexes
-            else {ident for ident, values in data.items() if field in values and values[field] == value}
-            for field, value in values.items()
-        )))]
+        result = [(ident, data[ident]) for ident in sorted(self._filter(values))]
+        return result
+
+    def filter_last(
+            self,
+            values: dict[typing.Any, typing.Any],
+    ) -> dict[typing.Any, typing.Any] | None:
+        idents = self._filter(values)
+        if idents:
+            result = self._data.get(max(idents))
+        else:
+            result = None
+        return result
+
+    def filter_first(
+            self,
+            values: dict[typing.Any, typing.Any],
+    ) -> dict[typing.Any, typing.Any] | None:
+        idents = self._filter(values)
+        if idents:
+            result = self._data.get(min(idents))
+        else:
+            result = None
         return result
 
     def islice(self, start=None, stop=None, step=None) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
