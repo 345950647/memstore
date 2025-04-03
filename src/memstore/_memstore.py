@@ -63,10 +63,11 @@ class MemStore:
             self,
             values: dict[typing.Any, typing.Any],
     ) -> list[tuple[int, dict[typing.Any, typing.Any]]]:
+        data = self._data
         indexes = self._indexes
-        result = [(ident, self.get(ident)) for ident in sorted(set.intersection(*(
+        result = [(ident, data[ident]) for ident in sorted(set.intersection(*(
             indexes[field].get(value, set()) if field in indexes
-            else {ident for ident, values in self._data.items() if field in values and values[field] == value}
+            else {ident for ident, values in data.items() if field in values and values[field] == value}
             for field, value in values.items()
         )))]
         return result
@@ -87,11 +88,9 @@ class MemStore:
             self,
             ident: int,
     ) -> bool:
-        try:
-            values = self._data.pop(ident)
-        except KeyError:
-            result = False
-        else:
+        data = self._data
+        if ident in data:
+            values = data[ident]
             for field, index in self._indexes.items():
                 if field in values:
                     value = values[field]
@@ -100,7 +99,10 @@ class MemStore:
                         idents.remove(ident)
                         if not idents:
                             del index[value]
+            del data[ident]
             result = True
+        else:
+            result = False
         return result
 
     def add_index(
@@ -116,7 +118,6 @@ class MemStore:
             self,
             field: typing.Any,
     ) -> None:
-        try:
-            del self._indexes[field]
-        except KeyError:
-            pass
+        indexes = self._indexes
+        if field in indexes:
+            del indexes[field]
